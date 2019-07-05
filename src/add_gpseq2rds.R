@@ -45,7 +45,6 @@ stopifnot(file.exists(metaGPSeq))
 stopifnot(dir.exists(rootGPSeq))
 stopifnot(dir.exists(outDir))
 
-print(step)
 cat(sprintf("
  # %s
 
@@ -291,7 +290,7 @@ if (interpolate) {
 	}, cl = threads))
 
 	cat("Writing output...\n")
-	saveRDS(structData, file.path(outDir, "radial.prob_g.interpol.rds"))
+	saveRDS(fData, file.path(outDir, "radial.prob_g.interpol.rds"))
 } else {
 	gData = read_gpseq_score(gMeta, rootGPSeq, beadSize, step)
 	gData = average_and_rescale_gpseq(gData)
