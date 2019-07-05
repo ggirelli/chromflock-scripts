@@ -46,6 +46,8 @@ parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
 p = parse_args(parser)
 attach(p['' != names(p)])
 
+outDir = NA
+if ( save_single ) outDir = rootDir
 if ( is.na(description) ) description = basename(rootDir)
 
 cat(sprintf("
@@ -65,16 +67,13 @@ cat(sprintf("
 
 # FUNCTIONS ====================================================================
 
-get_bead_distances = function(ssData) {
+get_bead_distances = function(ssData, rootDir = NA) {
 	pairIDs = data.table(expand.grid(1:nrow(ssData), 1:nrow(ssData)))[Var1 < Var2]
-	dData = data.table(d3d = dist(ssData[, .(x, y, z)]))
-
-	beadRadius = ((sphere**3)*volume/nrow(ssData))**(1/3)
-	rthr_effective = beadRadius * rthr
-
-	dData = cbind(pairIDs, dData)
+	dData = cbind(pairIDs, data.table(d3d = dist(ssData[, .(x, y, z)])))
 	setnames(dData, c("Var1", "Var2"), c("A", "B"))
-	dData[, structure := ssData[1, structure]]
+
+	if ( !is.na(rootDir) )
+		saveRDS(dData, file.path(rootDir, ssData[1, structure], "bead_dist.rds"))
 
 	return(dData)
 }
@@ -123,19 +122,14 @@ cat("Reading structures...\n")
 sData = read_all_structures(rootDir, threads)
 
 cat("Calculating pair-wise distances...\n")
-dData = pblapply(sData, get_bead_distances, cl = threads)
-if ( save_single ) {
-	cat("Saving single-structure pair-wise distances...\n")
-	b = pblapply(dData, function(sd) {
-		saveRDS(sd, file.path(rootDir, sd[1, structure], "bead_dist.rds"))
-	}, cl = threads)
-}
-dData = rbindlist(dData)
+dData = rbindlist(pblapply(sData, get_bead_distances, outDir, cl = threads))
 
 cat("Calculating mean/median pair-wise distances...\n")
+setDTthreads(threads)
 dData = dData[, .(d3dmean = mean(d3d, na.rm = T),
 	d3dmedian = median(d3d, na.rm = T)), by = c("A", "B")]
 setkeyv(dData, c("A", "B"))
+setDTthreads(1)
 
 cat("Retrieving bead labels...\n")
 bLabs = read_bead_labels(labPath)
