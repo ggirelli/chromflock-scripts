@@ -109,8 +109,10 @@ read_all_structures = function(dpath, nthreads = 1) {
 }
 
 read_bead_labels = function(lpath) {
-	dt = data.table(chromID = readBin(file(lpath, 'rb'), integer(),
+	LH = file(lpath, 'rb')
+	dt = data.table(chromID = readBin(LH, integer(),
 		n = 3043, size = 1, endian = "little"))
+	close(LH)
 
 	dt = rbindlist(by(dt, dt$chromID, FUN = function(ct) {
 		ct$start = (1:nrow(ct) - 1) * beadSize
