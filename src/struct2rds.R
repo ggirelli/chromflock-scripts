@@ -84,7 +84,7 @@ read_structure = function(spath, lpath) {
 
 read_all_structures = function(dpath, lpath, nthreads = 1) {
 	cat(sprintf(" Reading structures from '%s'\n", dpath))
-	pboptions(type = "txt")
+	pboptions(type = "timer")
 	out = rbindlist(pblapply(list.files(dpath, "cf_.*", full.names = T),
 		function(dpath) {
 			name = basename(dpath)

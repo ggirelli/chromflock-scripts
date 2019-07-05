@@ -60,7 +60,7 @@ cat(sprintf("
 	script_name, paste(rds, collapse = "\n               "),
 	rootGPSeq, metaGPSeq, outDir, step, interpolate, threads))
 
-pboptions(type = "txt")
+pboptions(type = "timer")
 
 # FUNCTIONS ====================================================================
 
