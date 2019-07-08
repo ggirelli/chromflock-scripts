@@ -82,11 +82,6 @@ get_captured_contacts = function(ssData, sphere, volume, rthr) {
 	cData = cbind(pairIDs[contactIDs], dData[contactIDs])
 	setnames(cData, c("Var1", "Var2"), c("A", "B"))
 
-	#nContact = cData[, .N]
-	#nTotal = dData[, .N]
-	#cat(sprintf("[%s] %d/%d (%.1f%%) bead pairs are in contact.\n",
-	#	ssData[1, structure], nContact, nTotal, nContact/nTotal*100))
-
 	cData[, structure := ssData[1, structure]]
 	return(cData)
 }
