@@ -252,14 +252,14 @@ cat("Reading RDS...\n")
 structData = rbindlist(pblapply(rds, readRDS, cl = threads))
 
 req_cols = c("chrom", "start", "end", "chromID", "rmean", "rmedian",
-	"n", "gpseq", "contacts", "label")
+	"size", "gpseq", "contacts", "label")
 stopifnot(all(req_cols %in% names(structData)))
 
 setkeyv(structData, c("chrom", "start", "end"))
 
-if ( 1 != length(structData[, unique(n)]) )
-	stop(sprintf("Multiple bead sizes detected: %s", structData[, unique(n)]))
-beadSize = structData[, unique(n)]
+beadSize = structData[, unique(size)]
+if ( 1 != length(beadSize) )
+	stop(sprintf("Multiple bead sizes detected: %s", beadSize))
 
 cat("Reading GPSeq...\n")
 	gMeta = fread(metaGPSeq, key = "condition")
