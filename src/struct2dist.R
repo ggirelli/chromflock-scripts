@@ -31,9 +31,13 @@ bead size in nt', name = script_name)
 parser = add_argument(parser, 'rootDir', 'Path to folder with structure data.')
 parser = add_argument(parser, 'labPath', 'Path to uint8 label file.')
 parser = add_argument(parser, 'beadSize', 'Bead size in nt.', type = class(0))
+parser = add_argument(parser, 'contactLab',
+	'Label for utilized contacts, e.g., all, intra, inter,...')
 
 parser = add_argument(parser, '--description',
 	'A short dataset label. Defaults to rootDir basename.', default = NA)
+parser = add_argument(parser, "--with-gpseq",
+	"GPSeq was included in the chromflock run.", flag = TRUE)
 parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
 	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
 
@@ -46,13 +50,15 @@ if ( is.na(description) ) description = basename(rootDir)
 cat(sprintf("
  # %s
 
-          Root : %s
-         Label : %s
-         Beads : %e
-       Threads : %d
-        Descr. : %s
+     Root : %s
+    Label : %s
+    Beads : %e
+ Contacts : %s
+    GPSeq : %s
+  Threads : %d
+   Descr. : %s
 \n",
-	script_name, rootDir, labPath, beadSize,
+	script_name, rootDir, labPath, beadSize, contactLab, with_gpseq,
 	threads, description))
 
 # FUNCTIONS ====================================================================
@@ -131,7 +137,7 @@ mDist = mDist / length(sData)
 dData = data.table(d3dmean = mDist)
 remove("pb", "mDist")
 
-cat("Retrieving bead labels...\n")
+cat("\nRetrieving bead labels...\n")
 bLabs = read_bead_labels(labPath)
 pairIDs = data.table(expand.grid(1:nrow(bLabs), 1:nrow(bLabs)))[Var1 < Var2]
 dData = cbind(pairIDs, dData)
@@ -140,9 +146,15 @@ setkeyv(dData, c("A", "B"))
 
 cat("Labeling Distances...\n")
 distances = cbind(bLabs[pairIDs$Var1], bLabs[pairIDs$Var2], pairIDs)
-setnames(distances, c(names(bLabs), paste0(names(bLabs), 2), "A", "B"))
+setnames(distances,
+	c(paste0(names(bLabs), "A"), paste0(names(bLabs), "B"), "A", "B"))
 setkeyv(distances, c("A", "B"))
 distances = distances[dData]
+
+distances[, size := beadSize]
+distances[, gpseq := with_gpseq]
+distances[, contacts := contactLab]
+distances[, label := description]
 distances[, c("A", "B") := NULL]
 
 cat("Writing output...\n")
