@@ -26,24 +26,19 @@ pboptions(type = "timer")
 # INPUT ========================================================================
 
 script_name = 'plot_struct.R'
-# parser = arg_parser('Generate plots comparing structures and GPSeq.',
-# 	name = script_name)
+parser = arg_parser('Generate plots comparing structures and GPSeq.',
+	name = script_name)
 
-# parser = add_argument(parser, 'gRDS',
-# 	'Path to input GPSeq rds generated with add_gpseq2rd.R')
-# parser = add_argument(parser, 'fRDS',
-# 	'Path to input FISH rds generated with add_gpseq2rd.R')
-# parser = add_argument(parser, 'outDir', 'Path to output folder.')
-# parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
-# 	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
+parser = add_argument(parser, 'gRDS',
+	'Path to input GPSeq rds generated with add_gpseq2rd.R')
+parser = add_argument(parser, 'fRDS',
+	'Path to input FISH rds generated with add_gpseq2rd.R')
+parser = add_argument(parser, 'outDir', 'Path to output folder.')
+parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
+	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
 
-# p = parse_args(parser)
-# attach(p['' != names(p)])
-
-gRDS = "/mnt/data/chromflock/20190704-noy_new3Trans/radial.prob_g.rds"
-fRDS = "/mnt/data/chromflock/20190704-noy_new3Trans/radial.prob_g.interpol.rds"
-outDir = "/mnt/data/chromflock/20190704-noy_new3Trans/plots"
-threads = 1
+p = parse_args(parser)
+attach(p['' != names(p)])
 
 cat(sprintf("
  # %s
@@ -52,7 +47,8 @@ cat(sprintf("
  iFISH RDS : %s
     Output : %s
    Threads : %d
-\n", script_name, gRDS, fRDS, outDir, threads))
+
+", script_name, gRDS, fRDS, outDir, threads))
 
 # FUNCTIONS ====================================================================
 
