@@ -57,6 +57,21 @@ cat(sprintf("
 
 # FUNCTIONS ====================================================================
 
+chrom2chromID = function(chrom, nchrom = 24, hetero = c("X", "Y")) {
+	# Convert a chromosome name (e.g., "chr1", "chrX") to a numerical ID.
+	if ( grepl(":", chrom) ) {
+		return(floor(as.numeric(gsub(":", ".",
+			substr(chrom, 4, nchar(chrom))))))
+	} else {
+		chromID = substr(chrom, 4, nchar(chrom))
+		if ( chromID %in% hetero )
+			chromID = nchrom - which(rev(hetero) == chromID) + 1
+		chromID = as.numeric(chromID)
+		stopifnot(!is.na(chromID))
+		return(chromID)
+	}
+}
+
 read_intra_matrix = function(fpath) {
 	meta = as.data.table(t(unlist(strsplit(fpath, "\\."))[c(1, 3, 4, 5, 6)]))
 	setnames(meta, c("accession", "chrom", "dtype", "ntype", "bsize"))
@@ -73,6 +88,8 @@ read_inter_matrix = function(fpath) {
 	meta = as.data.table(t(unlist(strsplit(fpath, "\\."))[c(1, 3, 4, 5, 6, 7)]))
 	setnames(meta,
 		c("accession", "chromA", "chromB", "dtype", "ntype", "bsize"))
+	if ( chrom2chromID(meta$chromB) < chrom2chromID(meta$chromA) )
+		setnames(meta, c("chromA", "chromB"), c("chromB", "chromA"))
 	interData = fread(file.path(interDir, fpath),
 		col.names = c("startA", "startB", "value"))
 	interData = cbind(interData, meta)[, .(chromA, startA, chromB, startB,
