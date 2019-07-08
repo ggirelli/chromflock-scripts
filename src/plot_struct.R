@@ -26,19 +26,24 @@ pboptions(type = "timer")
 # INPUT ========================================================================
 
 script_name = 'plot_struct.R'
-parser = arg_parser('Generate plots comparing structures and GPSeq.',
-	name = script_name)
+# parser = arg_parser('Generate plots comparing structures and GPSeq.',
+# 	name = script_name)
 
-parser = add_argument(parser, 'gRDS',
-	'Path to input GPSeq rds generated with add_gpseq2rd.R')
-parser = add_argument(parser, 'fRDS',
-	'Path to input FISH rds generated with add_gpseq2rd.R')
-parser = add_argument(parser, 'outDir', 'Path to output folder.')
-parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
-	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
+# parser = add_argument(parser, 'gRDS',
+# 	'Path to input GPSeq rds generated with add_gpseq2rd.R')
+# parser = add_argument(parser, 'fRDS',
+# 	'Path to input FISH rds generated with add_gpseq2rd.R')
+# parser = add_argument(parser, 'outDir', 'Path to output folder.')
+# parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
+# 	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
 
-p = parse_args(parser)
-attach(p['' != names(p)])
+# p = parse_args(parser)
+# attach(p['' != names(p)])
+
+gRDS = "/mnt/data/chromflock/20190704-noy_new3Trans/radial.prob_g.rds"
+fRDS = "/mnt/data/chromflock/20190704-noy_new3Trans/radial.prob_g.interpol.rds"
+outDir = "/mnt/data/chromflock/20190704-noy_new3Trans/plots"
+threads = 1
 
 cat(sprintf("
  # %s
@@ -113,6 +118,21 @@ save_and_plot <- function(x, bname, width, height,
   if( plot ) print(x)
 }
 
+chrom2chromID = function(chrom, nchrom = 24, hetero = c("X", "Y")) {
+	# Convert a chromosome name (e.g., "chr1", "chrX") to a numerical ID.
+	if ( grepl(":", chrom) ) {
+		return(floor(as.numeric(gsub(":", ".",
+			substr(chrom, 4, nchar(chrom))))))
+	} else {
+		chromID = substr(chrom, 4, nchar(chrom))
+		if ( chromID %in% hetero )
+			chromID = nchrom - which(rev(hetero) == chromID) + 1
+		chromID = as.numeric(chromID)
+		stopifnot(!is.na(chromID))
+		return(chromID)
+	}
+}
+
 plot_chrom_profile = function(cData, val.var = "rmedian") {
 	corData = rbindlist(by(cData,
 		cData$gpseqLab, function(gt) {
@@ -140,7 +160,7 @@ plot_chrom_profile = function(cData, val.var = "rmedian") {
 		) + xlab("Bin midpoint genomic coordinate (Mb)"
 		) + ylab("Distance from lamina (a.u.)"
 		) + ggtitle(cData[1, chrom]
-		) + ylim(0, 1.25)
+		) + ylim(0, 1.25) + xlim(0, cData[, max(end, na.rm = T)/1e6])
 	#save_and_plot(p, file.path(outDir,
 	#	sprintf("3Dstruct.GPSeq.profile.%s", cData[1, chrom])),
 	#	format = "png", width = 10, height = 6)
@@ -166,6 +186,12 @@ plot_chrom_profile = function(cData, val.var = "rmedian") {
 	gsData["all" == contacts, contactLab := "All contacts"]
 	gsData[, contactLab := factor(contactLab,
 		levels = c("Only intra contacts", "All contacts"))]
+
+	binSize = gsData[, unique(end-start)]
+	stopifnot(1 == length(binSize))
+	binStep = gsData[, .(step = unique(diff(start))),
+		by = c("contactLab", "gpseqLab", "label", "chrom")] [, unique(step)]
+	stopifnot(1 == length(binStep))
 
 # Plot correlation scatter
 	cat("GPSeq vs Structure correlation plot...\n")
@@ -203,7 +229,34 @@ plot_chrom_profile = function(cData, val.var = "rmedian") {
 # Plot chromosome profiles
 	cat("GPSeq vs Structure chromosome-profiles...\n")
 
-	pList = pblapply(split(gsData, gsData$chromID), plot_chrom_profile, cl = threads)
+	gsData2 = rbindlist(by(gsData, gsData$chrom, function(ct) {
+		rbindlist(by(ct, paste0(ct$gpseq, "~", ct$label, "~", ct$contact),
+			function(dt) {
+				dt = dt[order(start), .(chrom, start, end, chromID,
+						prob_g, rmean, rmedian,
+						gpseqLab, contactLab, label)]
+				starts = with(dt, seq(min(start, na.rm = T), max(start, na.rm = T),
+					by = binStep))
+				missing = starts[!starts %in% dt$start]
+				if ( 0 == length(missing) ) {
+					return(dt)
+				}
+				dt = rbind(dt, data.table(
+					chrom = dt[1, chrom],
+					start = missing, end = missing + binSize,
+					chromID = dt[1, chromID],
+					prob_g = NA, rmean = NA, rmedian = NA,
+					gpseqLab = dt[1, gpseqLab],
+					contactLab = dt[1, contactLab],
+					label = dt[1, label]
+				))
+				dt[order(start)]
+			}
+		))
+	}))
+	gsData2$chromID = unlist(lapply(gsData2$chrom, chrom2chromID))
+
+	pList = pblapply(split(gsData2, gsData2$chromID), plot_chrom_profile, cl = threads)
 	pdf(file.path(outDir, "3Dstruct.GPSeq.profile.pdf"), width = 10, height = 10)
 	l = lapply(pList, print)
 	graphics.off()
