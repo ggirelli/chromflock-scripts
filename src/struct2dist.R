@@ -23,23 +23,17 @@ pboptions(type = "timer")
 # INPUT ========================================================================
 
 script_name = 'struct2rcontacts.R'
-parser = arg_parser('Read 3D structures and extract pair-wise bead distances.
+parser = arg_parser('Read 3D structures and extract mean pairwise bead distance.
 It expects as input the path to a folder with "cf_NNN" subfolders, each
 containing a "coords.csv" file. Also, a uint8 label file is required, alongside
-bead size in nt, and Hi-C contact type.', name = script_name)
+bead size in nt', name = script_name)
 
 parser = add_argument(parser, 'rootDir', 'Path to folder with structure data.')
 parser = add_argument(parser, 'labPath', 'Path to uint8 label file.')
 parser = add_argument(parser, 'beadSize', 'Bead size in nt.', type = class(0))
-parser = add_argument(parser, 'contactLab',
-	'Label for utilized contacts, e.g., all, intra, inter,...')
 
 parser = add_argument(parser, '--description',
 	'A short dataset label. Defaults to rootDir basename.', default = NA)
-parser = add_argument(parser, "--with-gpseq",
-	"GPSeq was included in the chromflock run.", flag = TRUE)
-parser = add_argument(parser, "--save-single",
-	"Save single structure distances.", flag = TRUE)
 parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
 	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
 
@@ -47,7 +41,6 @@ p = parse_args(parser)
 attach(p['' != names(p)])
 
 outDir = NA
-if ( save_single ) outDir = rootDir
 if ( is.na(description) ) description = basename(rootDir)
 
 cat(sprintf("
@@ -56,14 +49,11 @@ cat(sprintf("
           Root : %s
          Label : %s
          Beads : %e
-      Contacts : %s
-         GPSeq : %s
        Threads : %d
-   Save single : %s
         Descr. : %s
 \n",
-	script_name, rootDir, labPath, beadSize, contactLab,
-	with_gpseq, threads, save_single, description))
+	script_name, rootDir, labPath, beadSize,
+	threads, description))
 
 # FUNCTIONS ====================================================================
 
@@ -80,7 +70,9 @@ get_bead_distances = function(ssData, rootDir = NA) {
 }
 
 read_structure = function(spath) {
-	return(fread(spath, col.names = c("x", "y", "z", "r", "i")))
+	out = fread(spath)
+	colnames(out) = c("x", "y", "z", "r", "i")[1:ncol(out)]
+	return(out)
 }
 
 read_all_structures = function(dpath, nthreads = 1) {
@@ -122,14 +114,22 @@ read_bead_labels = function(lpath) {
 cat("Reading structures...\n")
 sData = read_all_structures(rootDir, threads)
 
-cat("Calculating pair-wise distances...\n")
-dData = do.call(cbind, pblapply(sData,
-	get_bead_distances, outDir, cl = threads))
+cat("Checking structures size...\n")
 
-cat("Calculating mean/median pair-wise distances...\n")
-dData = rbindlist(pbapply(dData, 1, function(x) data.table(
-	d3dmean = mean(x, na.rm = T), d3dmedian = median(x, na.rm = T)),
-	cl = threads))
+nBeads = unique(unlist(lapply(sData, nrow)))
+stopifnot(length(nBeads) == 1)
+
+cat("Calculating average pair-wise bead distance\n")
+pb <- txtProgressBar(min = 1, max = length(sData), style = 3)
+mDist = dist(sData[[1]][, .(x, y, z)])
+setTxtProgressBar(pb, 1)
+for (i in 2:length(sData)) {
+	mDist = mDist + dist(sData[[i]][, .(x, y, z)])
+	setTxtProgressBar(pb, i)
+}
+mDist = mDist / length(sData)
+dData = data.table(d3dmean = mDist)
+remove("pb", "mDist")
 
 cat("Retrieving bead labels...\n")
 bLabs = read_bead_labels(labPath)
@@ -139,11 +139,11 @@ setnames(dData, c("Var1", "Var2"), c("A", "B"))
 setkeyv(dData, c("A", "B"))
 
 cat("Labeling Distances...\n")
-distances = data.table(expand.grid(1:nrow(bLabs), 1:nrow(bLabs)))[Var1 < Var2]
-distances = cbind(bLabs[distances$Var1], bLabs[distances$Var2], distances)
+distances = cbind(bLabs[pairIDs$Var1], bLabs[pairIDs$Var2], pairIDs)
 setnames(distances, c(names(bLabs), paste0(names(bLabs), 2), "A", "B"))
 setkeyv(distances, c("A", "B"))
-distances = distances[cData]
+distances = distances[dData]
+distances[, c("A", "B") := NULL]
 
 cat("Writing output...\n")
 saveRDS(distances, file.path(dirname(rootDir),
