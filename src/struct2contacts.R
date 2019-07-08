@@ -47,6 +47,17 @@ parser = add_argument(parser, "--rthr", type = class(0),
 parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
 	help = 'Number of threads for parallelization.', default = 1, nargs = 1)
 
+# rootDir = "/mnt/data/chromflock/20190704-noy_new3Trans/10000G"
+# labPath = "/mnt/data/chromflock/20190704-noy_new3Trans/L_noy_new3Trans.uint8"
+# beadSize = 1e6
+# contactLab = "all"
+# description = NA
+# with_gpseq = T
+# threads = 20
+# sphere = 1
+# volume = .2
+# rthr = 4
+
 p = parse_args(parser)
 attach(p['' != names(p)])
 
@@ -72,7 +83,8 @@ cat(sprintf("
 # FUNCTIONS ====================================================================
 
 get_captured_contacts = function(ssData, sphere, volume, rthr) {
-	pairIDs = data.table(expand.grid(1:nrow(ssData), 1:nrow(ssData)))[Var1 < Var2]
+	pairIDs = data.table(expand.grid(1:nrow(ssData), 1:nrow(ssData))
+		)[Var1 < Var2][order(Var1)]
 	dData = data.table(d3d = dist(ssData[, .(x, y, z)]))
 
 	beadRadius = ((sphere**3)*volume/nrow(ssData))**(1/3)

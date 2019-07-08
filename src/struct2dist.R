@@ -44,6 +44,14 @@ parser = add_argument(parser, arg = '--threads', short = '-t', type = class(0),
 p = parse_args(parser)
 attach(p['' != names(p)])
 
+# rootDir = "/mnt/data/chromflock/20190704-noy_new3Trans/10000G"
+# labPath = "/mnt/data/chromflock/20190704-noy_new3Trans/L_noy_new3Trans.uint8"
+# beadSize = 1e6
+# contactLab = "all"
+# description = NA
+# with_gpseq = T
+# threads = 20
+
 outDir = NA
 if ( is.na(description) ) description = basename(rootDir)
 
@@ -139,7 +147,8 @@ remove("pb", "mDist")
 
 cat("\nRetrieving bead labels...\n")
 bLabs = read_bead_labels(labPath)
-pairIDs = data.table(expand.grid(1:nrow(bLabs), 1:nrow(bLabs)))[Var1 < Var2]
+pairIDs = data.table(expand.grid(1:nrow(bLabs), 1:nrow(bLabs))
+	)[Var1 < Var2][order(Var1, Var2)]
 dData = cbind(pairIDs, dData)
 setnames(dData, c("Var1", "Var2"), c("A", "B"))
 setkeyv(dData, c("A", "B"))
