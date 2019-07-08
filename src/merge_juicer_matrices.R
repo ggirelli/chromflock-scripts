@@ -57,12 +57,7 @@ cat(sprintf("
 
 # FUNCTIONS ====================================================================
 
-# RUN ==========================================================================
-
-flist = list.files(intraDir,
-	sprintf("observed\\.%s\\.%d\\.", normType, beadSize))
-cat(sprintf(" Reading %d intra-contact files...\n", length(flist)))
-intraData = rbindlist(pblapply(flist, function(fpath) {
+read_intra_matrix = function(fpath) {
 	meta = as.data.table(t(unlist(strsplit(fpath, "\\."))[c(1, 3, 4, 5, 6)]))
 	setnames(meta, c("accession", "chrom", "dtype", "ntype", "bsize"))
 	intraData = fread(file.path(intraDir, fpath),
@@ -72,20 +67,30 @@ intraData = rbindlist(pblapply(flist, function(fpath) {
 	intraData = intraData[, .(chromA, startA, chromB, startB, value,
 		accession, dtype, ntype, bsize)]
 	return(intraData)
-}, cl = threads))
+}
 
-flist = list.files(interDir,
-	sprintf("observed\\.%s\\.%d\\.", normType, beadSize))
-cat(sprintf(" Reading %d inter-contact files...\n", length(flist)))
-interData = rbindlist(pblapply(flist, function(fpath) {
+read_inter_matrix = function(fpath) {
 	meta = as.data.table(t(unlist(strsplit(fpath, "\\."))[c(1, 3, 4, 5, 6, 7)]))
-	setnames(meta, c("accession", "chromA", "chromB", "dtype", "ntype", "bsize"))
+	setnames(meta,
+		c("accession", "chromA", "chromB", "dtype", "ntype", "bsize"))
 	interData = fread(file.path(interDir, fpath),
 		col.names = c("startA", "startB", "value"))
 	interData = cbind(interData, meta)[, .(chromA, startA, chromB, startB,
 		value, accession, dtype, ntype, bsize)]
 	return(interData)
-}, cl = threads))
+}
+
+# RUN ==========================================================================
+
+flist = list.files(intraDir,
+	sprintf("observed\\.%s\\.%d\\.", normType, beadSize))
+cat(sprintf(" Reading %d intra-contact files...\n", length(flist)))
+intraData = rbindlist(pblapply(flist, read_intra_matrix, cl = threads))
+
+flist = list.files(interDir,
+	sprintf("observed\\.%s\\.%d\\.", normType, beadSize))
+cat(sprintf(" Reading %d inter-contact files...\n", length(flist)))
+interData = rbindlist(pblapply(flist, read_inter_matrix, cl = threads))
 
 cat(" Merging contact files...\n")
 hicData = rbind(intraData, interData)[order(chromA, startA, chromB, startB)]
