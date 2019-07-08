@@ -31,9 +31,13 @@ bead size in nt, and Hi-C contact type.', name = script_name)
 parser = add_argument(parser, 'rootDir', 'Path to folder with structure data.')
 parser = add_argument(parser, 'labPath', 'Path to uint8 label file.')
 parser = add_argument(parser, 'beadSize', 'Bead size in nt.', type = class(0))
+parser = add_argument(parser, 'contactLab',
+	'Label for utilized contacts, e.g., all, intra, inter,...')
 
 parser = add_argument(parser, '--description',
 	'A short dataset label. Defaults to rootDir basename.', default = NA)
+parser = add_argument(parser, "--with-gpseq",
+	"GPSeq was included in the chromflock run.", flag = TRUE)
 parser = add_argument(parser, "--sphere",
 	"Sphere radius. Default: 1", default = 1, type = class(0))
 parser = add_argument(parser, "--volume", type = class(0),
@@ -54,13 +58,15 @@ cat(sprintf("
           Root : %s
          Label : %s
          Beads : %e
+      Contacts : %s
+         GPSeq : %s
  Sphere radius : %.3f
  Vol. fraction : %.3f
    R threshold : %.3f
        Threads : %d
         Descr. : %s
 \n",
-	script_name, rootDir, labPath, beadSize,
+	script_name, rootDir, labPath, beadSize, contactLab, with_gpseq,
 	sphere, volume, rthr, threads, description))
 
 # FUNCTIONS ====================================================================
@@ -144,6 +150,14 @@ contacts = cbind(bLabs[contacts$Var1], bLabs[contacts$Var2], contacts)
 setnames(contacts, c(names(bLabs), paste0(names(bLabs), 2), "A", "B"))
 setkeyv(contacts, c("A", "B"))
 contacts = contacts[cData]
+
+contacts[, size := beadSize]
+contacts[, gpseq := with_gpseq]
+contacts[, contacts := contactLab]
+contacts[, label := description]
+contacts[, sphere := sphere]
+contacts[, volume := volume]
+contacts[, rthr := rthr]
 
 cat("Writing output...\n")
 saveRDS(contacts, file.path(dirname(rootDir),
