@@ -71,11 +71,12 @@ get_bead_distances = function(ssData, rootDir = NA) {
 	pairIDs = data.table(expand.grid(1:nrow(ssData), 1:nrow(ssData)))[Var1 < Var2]
 	dData = cbind(pairIDs, data.table(d3d = dist(ssData[, .(x, y, z)])))
 	setnames(dData, c("Var1", "Var2"), c("A", "B"))
+	remove("pairIDs")
 
 	if ( !is.na(rootDir) )
 		saveRDS(dData, file.path(rootDir, ssData[1, structure], "bead_dist.rds"))
 
-	return(dData)
+	return(dData[, d3d])
 }
 
 read_structure = function(spath) {
@@ -122,17 +123,20 @@ cat("Reading structures...\n")
 sData = read_all_structures(rootDir, threads)
 
 cat("Calculating pair-wise distances...\n")
-dData = rbindlist(pblapply(sData, get_bead_distances, outDir, cl = threads))
+dData = do.call(cbind, pblapply(sData,
+	get_bead_distances, outDir, cl = threads))
 
 cat("Calculating mean/median pair-wise distances...\n")
-setDTthreads(threads)
-dData = dData[, .(d3dmean = mean(d3d, na.rm = T),
-	d3dmedian = median(d3d, na.rm = T)), by = c("A", "B")]
-setkeyv(dData, c("A", "B"))
-setDTthreads(1)
+dData = rbindlist(pbapply(dData, 1, function(x) data.table(
+	d3dmean = mean(x, na.rm = T), d3dmedian = median(x, na.rm = T)),
+	cl = threads))
 
 cat("Retrieving bead labels...\n")
 bLabs = read_bead_labels(labPath)
+pairIDs = data.table(expand.grid(1:nrow(bLabs), 1:nrow(bLabs)))[Var1 < Var2]
+dData = cbind(pairIDs, dData)
+setnames(dData, c("Var1", "Var2"), c("A", "B"))
+setkeyv(dData, c("A", "B"))
 
 cat("Labeling Distances...\n")
 distances = data.table(expand.grid(1:nrow(bLabs), 1:nrow(bLabs)))[Var1 < Var2]
