@@ -104,7 +104,7 @@ structData = read_all_structures(rootDir, labPath, threads)[,
 	.(rmean = mean(r, na.rm = T), rmedian = median(r, na.rm = T)),
 	by = c("chrom", "start", "end", "chromID")]
 
-structData[, n := beadSize]
+structData[, size := beadSize]
 structData[, gpseq := with_gpseq]
 structData[, contacts := contactLab]
 structData[, label := description]
