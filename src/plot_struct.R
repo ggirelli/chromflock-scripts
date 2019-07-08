@@ -203,7 +203,7 @@ plot_chrom_profile = function(cData, val.var = "rmedian") {
 # Plot chromosome profiles
 	cat("GPSeq vs Structure chromosome-profiles...\n")
 
-	pList = pblapply(split(gsData, gsData$chrom), plot_chrom_profile, cl = threads)
+	pList = pblapply(split(gsData, gsData$chromID), plot_chrom_profile, cl = threads)
 	pdf(file.path(outDir, "3Dstruct.GPSeq.profile.pdf"), width = 10, height = 10)
 	l = lapply(pList, print)
 	graphics.off()
