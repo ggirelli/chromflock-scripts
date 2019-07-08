@@ -92,7 +92,9 @@ get_captured_contacts = function(ssData, sphere, volume, rthr) {
 }
 
 read_structure = function(spath) {
-	return(fread(spath, col.names = c("x", "y", "z", "r", "i")))
+	out = fread(spath)
+	colnames(out) = c("x", "y", "z", "r", "i")[1:ncol(out)]
+	return(out)
 }
 
 read_all_structures = function(dpath, nthreads = 1) {
