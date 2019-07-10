@@ -22,7 +22,7 @@ pboptions(type = "timer")
 
 # INPUT ========================================================================
 
-script_name = 'struct2rcontacts.R'
+script_name = 'struct2dist.R'
 parser = arg_parser('Read 3D structures and extract mean pairwise bead distance.
 It expects as input the path to a folder with "cf_NNN" subfolders, each
 containing a "coords.csv" file. Also, a uint8 label file is required, alongside
