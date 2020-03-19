@@ -33,6 +33,7 @@ parser = add_argument(parser, 'labPath', 'Path to uint8 label file.')
 parser = add_argument(parser, 'beadSize', 'Bead size in nt.', type = class(0))
 parser = add_argument(parser, 'contactLab',
 	'Label for utilized contacts, e.g., all, intra, inter,...')
+parser = add_argument(parser, 'nBeads', 'Number of beads', type=class(0))
 
 parser = add_argument(parser, '--description',
 	'A short dataset label. Defaults to rootDir basename.', default = NA)
@@ -60,19 +61,20 @@ cat(sprintf("
 
      Root : %s
     Label : %s
-    Beads : %e
+    Beads : %e (%d)
  Contacts : %s
     GPSeq : %s
   Threads : %d
    Descr. : %s
 \n",
-	script_name, rootDir, labPath, beadSize, contactLab, with_gpseq,
+	script_name, rootDir, labPath, beadSize, nBeads, contactLab, with_gpseq,
 	threads, description))
 
 # FUNCTIONS ====================================================================
 
 get_bead_distances = function(ssData, rootDir = NA) {
 	pairIDs = data.table(expand.grid(1:nrow(ssData), 1:nrow(ssData)))[Var1 < Var2]
+	pairIDs = pairIDs[order(Var2)][order(Var1)]
 	dData = cbind(pairIDs, data.table(d3d = dist(ssData[, .(x, y, z)])))
 	setnames(dData, c("Var1", "Var2"), c("A", "B"))
 	remove("pairIDs")
@@ -105,7 +107,7 @@ read_all_structures = function(dpath, nthreads = 1) {
 read_bead_labels = function(lpath) {
 	LH = file(lpath, 'rb')
 	dt = data.table(chromID = readBin(LH, integer(),
-		n = 3043, size = 1, endian = "little"))
+		n = nBeads, size = 1, endian = "little"))
 	close(LH)
 
 	dt = rbindlist(by(dt, dt$chromID, FUN = function(ct) {

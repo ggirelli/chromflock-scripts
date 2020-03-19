@@ -84,7 +84,7 @@ cat(sprintf("
 
 get_captured_contacts = function(ssData, sphere, volume, rthr) {
 	pairIDs = data.table(expand.grid(1:nrow(ssData), 1:nrow(ssData))
-		)[Var1 < Var2][order(Var1)]
+		)[Var1 < Var2][order(Var2)][order(Var1)]
 	dData = data.table(d3d = dist(ssData[, .(x, y, z)]))
 
 	beadRadius = ((sphere**3)*volume/nrow(ssData))**(1/3)
